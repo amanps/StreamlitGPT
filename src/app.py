@@ -7,10 +7,6 @@ from openai import OpenAI
 from openai import AssistantEventHandler
 
 import json
-from sqlalchemy import create_engine
-from sqlalchemy import text
-from sqlalchemy.pool import NullPool
-from sqlalchemy import inspect
 
 import glob
 
@@ -88,7 +84,7 @@ function_json = {
 
 MODEL = "gpt-4-turbo" # Latest model
 
-api_key = ""
+api_key = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=api_key)
 
 # Initialize session state variables
