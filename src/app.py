@@ -97,7 +97,7 @@ with open("data/instructions.txt","r") as rfile:
 
 
 if "assistant" not in st.session_state:
-    client = OpenAI(api_key="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")
+    client = OpenAI(api_key="<>")
     st.session_state.assistant = client.beta.assistants.create(
         name="Campus Chatbot",
         instructions=instructions,
