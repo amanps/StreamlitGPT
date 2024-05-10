@@ -8,6 +8,10 @@ from openai import AssistantEventHandler
 
 import json
 from sqlalchemy import create_engine
+from sqlalchemy import text
+from sqlalchemy.pool import NullPool
+from sqlalchemy import inspect
+
 import glob
 
 
@@ -17,7 +21,8 @@ st.set_page_config(page_title="Campus Assistant", page_icon=":robot:")
 
 @st.cache_resource()
 def set_up_sql_backend():
-    engine = create_engine('sqlite://', echo=False)
+    engine = create_engine('sqlite://?check_same_thread=False', echo=False)
+    #engine = create_engine('sqlite://', echo=False)
 
     # Get a list of all CSV files in the directory
     csv_files = glob.glob('data/*.csv')
@@ -35,22 +40,32 @@ def set_up_sql_backend():
     return engine
 
 
-sql_engine = set_up_sql_backend()
+#sql_engine = set_up_sql_backend()
+#sql_engine = set_up_sql_backend()
+#inspector = inspect(sql_engine)
 
-
+#table_names = inspector.get_table_names()
+#print("Tables in the database:")
+#for table_name in table_names:
+#    print(table_name)
+conn = st.connection('campus_db', type='sql')
+#pet_owners = conn.query('SELECT * FROM Student_Master LIMIT 10')
+#print(pet_owners)
 
 def run_sql_query(query,output_type="Table"):
+    print("running sql query:",query)
     try:
-        result = pd.read_sql(query,con=sql_engine)
+        result = conn.query(query)
         if len(result)>5:
             output_type = "Table"
         if output_type == "Table":
             return result.to_markdown()
         elif output_type == "JSON":
-            return result.to_json()
+            return result.to_json(orient='records')
         else:
             return result.to_csv()
-    except:
+    except Exception as e:
+        print(e)
         return "Having trouble checking this. Please check the info you've provided and try again."
 
 
@@ -70,10 +85,11 @@ function_json = {
 }
 
 
-# Initialize OpenAI client
-client = OpenAI()
 
 MODEL = "gpt-4-turbo" # Latest model
+
+api_key = ""
+client = OpenAI(api_key=api_key)
 
 # Initialize session state variables
 if "session_id" not in st.session_state:
@@ -89,15 +105,12 @@ if "retry_error" not in st.session_state:
     st.session_state.retry_error = 0
 
 
-run_sql_query("SELECT * FROM 'Student Master' LIMIT 5")
-
 
 with open("data/instructions.txt","r") as rfile:
     instructions = rfile.read()
 
 
 if "assistant" not in st.session_state:
-    client = OpenAI(api_key="<>")
     st.session_state.assistant = client.beta.assistants.create(
         name="Campus Chatbot",
         instructions=instructions,
@@ -155,7 +168,7 @@ if hasattr(st.session_state.run, 'status'):
         with st.chat_message('assistant'):
             if st.session_state.retry_error < 3:
                 st.write("Run failed, retrying ......")
-                time.sleep(3)
+                time.sleep(1)
                 st.rerun()
             else:
                 st.error("FAILED: The OpenAI API is currently processing too many requests. Please try again later ......")
@@ -193,7 +206,7 @@ if hasattr(st.session_state.run, 'status'):
 
 
         if st.session_state.retry_error < 3:
-            time.sleep(3)
+            time.sleep(1)
             st.rerun()
 
     
@@ -205,5 +218,5 @@ if hasattr(st.session_state.run, 'status'):
         )
 
         if st.session_state.retry_error < 3:
-            time.sleep(3)
+            time.sleep(1)
             st.rerun()
