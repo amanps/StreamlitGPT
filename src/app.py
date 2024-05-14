@@ -7,7 +7,7 @@ from openai import OpenAI
 from openai import AssistantEventHandler
 
 import json
-
+import sqlite3
 import glob
 
 
@@ -17,36 +17,30 @@ st.set_page_config(page_title="Campus Assistant", page_icon=":robot:")
 
 @st.cache_resource()
 def set_up_sql_backend():
-    engine = create_engine('sqlite://?check_same_thread=False', echo=False)
-    #engine = create_engine('sqlite://', echo=False)
-
     # Get a list of all CSV files in the directory
     csv_files = glob.glob('data/*.csv')
 
-    # Create an empty list to store the dataframes
-    dfs = []
+    conn = sqlite3.connect('campus_database.db')
 
     # Iterate over each CSV file and read it into a dataframe
     for file in csv_files:
-        df = pd.read_csv(file)
         table_name = file.split('/')[-1].split('.')[0]
-        df=df.dropna(axis=1,how='all')
-        df.to_sql(name=table_name,con=engine)
+        if table_name == "Student Master":
+            Student_Master = pd.read_csv(file)
+            Student_Master = Student_Master.dropna(axis=1,how='all')
+            Student_Master.to_sql('Student_Master', conn, if_exists='replace')
 
-    return engine
+        else:
+            Student_Subject = pd.read_csv(file)
+            Student_Subject = Student_Subject.dropna(axis=1,how='all')
+            Student_Subject.to_sql('Student_Subject', conn, if_exists='replace')
+    conn.commit()
+    conn.close()
 
 
 #sql_engine = set_up_sql_backend()
-#sql_engine = set_up_sql_backend()
-#inspector = inspect(sql_engine)
 
-#table_names = inspector.get_table_names()
-#print("Tables in the database:")
-#for table_name in table_names:
-#    print(table_name)
 conn = st.connection('campus_db', type='sql')
-#pet_owners = conn.query('SELECT * FROM Student_Master LIMIT 10')
-#print(pet_owners)
 
 def run_sql_query(query,output_type="Table"):
     print("running sql query:",query)
@@ -82,7 +76,7 @@ function_json = {
 
 
 
-MODEL = "gpt-4-turbo" # Latest model
+MODEL = "gpt-4o" # Latest model
 
 api_key = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=api_key)
